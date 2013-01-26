@@ -244,14 +244,11 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
                 for (Message message : worklist) {
                     try {
-                        // parse via regex
-                        message.getBody();
-
-                        bulkRequestBuilder.add(message.getBody(), 0, message.getBody().length, false);
+                        bulkRequestBuilder.add(message.getBody(), 0, message.getBody().length, true);
                     } catch (RequeueWithoutBackoff e) {
                         requeueMessage(message, false);
                     } catch (Exception e) {
-                        // do nothing, success already false
+                        logger.error("failed to add a message", e);
                     }
                 }
                 process(bulkRequestBuilder, worklist);
