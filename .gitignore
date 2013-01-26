@@ -1,3 +1,10 @@
-.idea/*
+/data
+/work
+/logs
+/.idea
+/target
 .DS_Store
 *.iml
+/.settings
+/.project
+/.classpath

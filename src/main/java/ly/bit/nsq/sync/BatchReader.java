@@ -22,11 +22,11 @@ public class BatchReader extends NSQReaderImpl implements NSQReader {
     private ConcurrentLinkedQueue<Message> messages;
     private SyncHandler handler;
 
-    public BatchReader(String topic, String channel, SyncHandler handler) {
+    public BatchReader(String topic, String channel, SyncHandler handler, int retryCount, int maxInFlight) {
         super();
 
         this.handler = handler;
-        this.init(topic, channel);
+        this.init(topic, channel, retryCount, maxInFlight);
     }
 
     public void addMessageForProcessing(Message msg) {

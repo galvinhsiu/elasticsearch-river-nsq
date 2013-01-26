@@ -19,7 +19,7 @@ public class SyncReader extends NSQReaderImpl implements NSQReader {
 		this.handler = handler;
         this.executor = Executors.newSingleThreadExecutor();
 
-        this.init(topic, channel);
+        this.init(topic, channel, 2, 1);
 	}
 
 	private class SyncMessageRunnable implements Runnable {

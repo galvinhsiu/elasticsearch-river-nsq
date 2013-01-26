@@ -34,10 +34,10 @@ public abstract class NSQReaderImpl implements NSQReader {
 
 	public static final ConcurrentHashMap<String, NSQReaderImpl> readerIndex = new ConcurrentHashMap<String, NSQReaderImpl>();
 	
-	public void init(String topic, String channel){
+	public void init(String topic, String channel, int retryCount, int maxInFlight){
 		this.requeueDelay = 50;
-		this.maxRetries = 2;
-		this.maxInFlight = 1;
+		this.maxRetries = retryCount;
+		this.maxInFlight = maxInFlight;
 		this.connections = new ConcurrentHashMap<String, Connection>();
 		this.topic = topic;
 		this.channel = channel;

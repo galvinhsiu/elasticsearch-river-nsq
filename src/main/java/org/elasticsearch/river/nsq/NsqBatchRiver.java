@@ -44,7 +44,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.logging.Level;
 
 /**
  *
@@ -63,7 +62,8 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
     private final boolean ordered;
 
     private final int requeueDelay = 50;
-    private final int maxRetries = 2;
+    private int maxRetries = 2;
+    private int maxInFlight = 10;
 
     private volatile boolean closed = false;
     private volatile Thread[] thread;
@@ -83,22 +83,26 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
             if (nsqSettings.containsKey("addresses")) {
                 List<String> addresses = new ArrayList<String>();
-                for(Map<String, Object> address : (List<Map<String, Object>>) nsqSettings.get("addresses")) {
-                    addresses.add( XContentMapValues.nodeStringValue(address.get("address"), "http://localhost:4161"));
+                for (Map<String, Object> address : (List<Map<String, Object>>) nsqSettings.get("addresses")) {
+                    addresses.add(XContentMapValues.nodeStringValue(address.get("address"), "http://localhost:4161"));
                 }
                 nsqAddresses = addresses.toArray(new String[addresses.size()]);
             } else {
                 String nsqHost = XContentMapValues.nodeStringValue(nsqSettings.get("address"), "http://localhost:4161");
-                nsqAddresses = new String[]{ nsqHost };
+                nsqAddresses = new String[]{nsqHost};
             }
 
             nsqTopic = XContentMapValues.nodeStringValue(nsqSettings.get("topic"), "elasticsearch");
             nsqChannel = XContentMapValues.nodeStringValue(nsqSettings.get("channel"), "elasticsearch");
+            maxInFlight = XContentMapValues.nodeIntegerValue(nsqSettings.get("max_inflight"), 10);
+            maxRetries = XContentMapValues.nodeIntegerValue(nsqSettings.get("max_retries"), 2);
         } else {
-            nsqAddresses = new String[]{ "http://localhost:4161" };
+            nsqAddresses = new String[]{"http://localhost:4161"};
 
             nsqTopic = "elasticsearch";
             nsqChannel = "elasticsearch";
+            maxInFlight = 10;
+            maxRetries = 2;
         }
 
         if (settings.settings().containsKey("index")) {
@@ -124,7 +128,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
         ThreadFactory factory = EsExecutors.daemonThreadFactory(settings.globalSettings(), "nsq_river");
 
         this.thread = new Thread[this.workers];
-        for(int count = 0; count < this.thread.length; count++) {
+        for (int count = 0; count < this.thread.length; count++) {
             this.thread[count] = factory.newThread(new Consumer());
             this.thread[count].start();
         }
@@ -159,11 +163,10 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
     class MessageBatchTimerTask implements Runnable {
 
-        public void requeueMessage(Message msg, boolean doDelay){
-            if(msg.getAttempts() > maxRetries){
+        public void requeueMessage(Message msg, boolean doDelay) {
+            if (msg.getAttempts() > maxRetries) {
                 this.finishMessage(msg);
-                return;
-            }else{
+            } else {
                 int newDelay = doDelay ? 0 : requeueDelay * msg.getAttempts();
                 try {
                     msg.getConn().send(ConnectionUtils.requeue(msg.getId(), newDelay));
@@ -173,7 +176,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
             }
         }
 
-        public void finishMessage(Message msg){
+        public void finishMessage(Message msg) {
             try {
                 msg.getConn().send(ConnectionUtils.finish(msg.getId()));
             } catch (NSQException e) {
@@ -189,7 +192,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
                         logger.warn("failed to execute" + bulk_response.buildFailureMessage());
                     }
 
-                    for(Message message : messages_to_execute) {
+                    for (Message message : messages_to_execute) {
                         finishMessage(message);
                     }
                 } catch (Exception e) {
@@ -203,7 +206,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
                             logger.warn("failed to execute" + bulk_response.buildFailureMessage());
                         }
 
-                        for(Message message : messages_to_execute) {
+                        for (Message message : messages_to_execute) {
                             finishMessage(message);
                         }
                     }
@@ -213,13 +216,13 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
                         if (e instanceof InvalidIndexNameException) {
                             logger.warn("failed to execute bulk, dropping message", e);
 
-                            for(Message message : messages_to_execute) {
+                            for (Message message : messages_to_execute) {
                                 finishMessage(message);
                             }
                         } else {
                             logger.warn("failed to execute bulk, requeuing message", e);
 
-                            for(Message message : messages_to_execute) {
+                            for (Message message : messages_to_execute) {
                                 requeueMessage(message, true);
                             }
                         }
@@ -230,7 +233,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
         public void run() {
             List<Message> worklist = new ArrayList<Message>();
-            while(messages.peek() != null) {
+            while (messages.peek() != null) {
                 Message message = messages.poll();
                 worklist.add(message);
             }
@@ -280,9 +283,9 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
                     break;
                 }
                 try {
-                    batchReader = new BatchReader(nsqTopic, nsqChannel, this);
+                    batchReader = new BatchReader(nsqTopic, nsqChannel, this, maxRetries, maxInFlight);
 
-                    for(String nsqAddress : nsqAddresses) {
+                    for (String nsqAddress : nsqAddresses) {
                         logger.info("performing lookupd [{}] => [{}] : [{}]", nsqAddress, nsqTopic, nsqChannel);
                         batchReader.addLookupd(nsqAddress);
                     }
@@ -308,7 +311,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
                     try {
                         this.wait();
-                    } catch(InterruptedException e) {
+                    } catch (InterruptedException e) {
                         if (closed) {
                             break;
                         }
