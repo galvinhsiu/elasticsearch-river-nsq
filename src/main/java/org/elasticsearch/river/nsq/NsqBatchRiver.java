@@ -6,6 +6,7 @@ import ly.bit.nsq.exceptions.NSQException;
 import ly.bit.nsq.exceptions.RequeueWithoutBackoff;
 import ly.bit.nsq.sync.BatchReader;
 import ly.bit.nsq.sync.SyncHandler;
+import org.apache.lucene.util.ThreadInterruptedException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -135,12 +136,12 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
     @Override
     public void close() {
-        logger.info("closing nsq river => [{}]", this.workers);
-
         if (closed) {
             return;
         }
         closed = true;
+
+        logger.info("closing nsq river => [{}]", this.workers);
 
         if (this.thread != null) {
             for (Thread aThread : this.thread) {
@@ -149,10 +150,10 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
         }
         this.thread = null;
 
+        logger.info("creating nsq river executor");
         if (this.timer != null) {
             this.timer.shutdownNow();
         }
-
         this.timer = null;
     }
 
@@ -304,21 +305,20 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
                 // now use the queue to listen for messages
                 while (true) {
-                    if (closed) {
+                    if (closed || Thread.interrupted()) {
                         break;
                     }
 
                     try {
-                        this.wait();
+                        Thread.sleep(Long.MAX_VALUE);
                     } catch (InterruptedException e) {
-                        if (closed) {
-                            break;
-                        }
+                        break;
                     }
                 }
             }
 
             if (batchReader != null) {
+                logger.info("closing lookupd [{}] : [{}]", nsqTopic, nsqChannel);
                 batchReader.shutdown();
             }
         }
