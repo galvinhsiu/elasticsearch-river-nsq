@@ -1,14 +1,14 @@
 package ly.bit.nsq;
 
+import ly.bit.nsq.exceptions.NSQException;
+import ly.bit.nsq.lookupd.AbstractLookupd;
+import ly.bit.nsq.lookupd.SyncLookupdJob;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import ly.bit.nsq.exceptions.NSQException;
-import ly.bit.nsq.lookupd.AbstractLookupd;
-import ly.bit.nsq.lookupd.SyncLookupdJob;
 
 
 public abstract class NSQReaderImpl implements NSQReader {

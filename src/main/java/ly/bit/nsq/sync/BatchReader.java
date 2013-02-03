@@ -4,18 +4,10 @@ import ly.bit.nsq.Message;
 import ly.bit.nsq.NSQReader;
 import ly.bit.nsq.NSQReaderImpl;
 import ly.bit.nsq.exceptions.NSQException;
-import ly.bit.nsq.exceptions.RequeueWithoutBackoff;
 import ly.bit.nsq.lookupd.AbstractLookupd;
 import ly.bit.nsq.lookupd.SyncLookupd;
-import org.elasticsearch.river.nsq.NsqBatchRiver;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class BatchReader extends NSQReaderImpl implements NSQReader {
 

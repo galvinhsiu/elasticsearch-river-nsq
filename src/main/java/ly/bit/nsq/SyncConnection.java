@@ -1,12 +1,12 @@
 package ly.bit.nsq;
 
+import ly.bit.nsq.exceptions.NSQException;
+
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import ly.bit.nsq.exceptions.NSQException;
 
 public class SyncConnection extends Connection {
 

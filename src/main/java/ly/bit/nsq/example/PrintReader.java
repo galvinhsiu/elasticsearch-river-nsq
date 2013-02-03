@@ -6,7 +6,6 @@ import ly.bit.nsq.sync.SyncHandler;
 import ly.bit.nsq.sync.SyncReader;
 
 import java.util.List;
-import java.util.Map;
 
 public class PrintReader implements SyncHandler {
 

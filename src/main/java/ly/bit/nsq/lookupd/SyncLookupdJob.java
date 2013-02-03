@@ -1,12 +1,12 @@
 package ly.bit.nsq.lookupd;
 
+import ly.bit.nsq.NSQReaderImpl;
+import ly.bit.nsq.exceptions.NSQException;
+
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import ly.bit.nsq.NSQReaderImpl;
-import ly.bit.nsq.exceptions.NSQException;
 
 public class SyncLookupdJob implements Runnable {
 

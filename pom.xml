@@ -18,13 +18,11 @@
         </license>
     </licenses>
 
-    <!--
     <scm>
-        <connection>scm:git:git@github.com:elasticsearch/elasticsearch-river-rabbitmq.git</connection>
-        <developerConnection>scm:git:git@github.com:elasticsearch/elasticsearch-river-rabbitmq.git</developerConnection>
-        <url>http://github.com/elasticsearch/elasticsearch-river-rabbitmq</url>
+        <connection>scm:git:git@github.com:galvinhsiu/elasticsearch-river-nsq.git</connection>
+        <developerConnection>scm:git:git@github.com:galvinhsiu/elasticsearch-river-nsq.git</developerConnection>
+        <url>http://github.com/galvinhsiu/elasticsearch-river-nsq</url>
     </scm>
-    -->
 
     <parent>
         <groupId>org.sonatype.oss</groupId>

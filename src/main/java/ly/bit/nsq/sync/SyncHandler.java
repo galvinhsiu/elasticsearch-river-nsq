@@ -1,11 +1,7 @@
 package ly.bit.nsq.sync;
 
 import ly.bit.nsq.Message;
-import ly.bit.nsq.NSQReader;
 import ly.bit.nsq.exceptions.NSQException;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * @author dan

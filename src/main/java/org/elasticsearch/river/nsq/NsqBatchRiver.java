@@ -6,7 +6,6 @@ import ly.bit.nsq.exceptions.NSQException;
 import ly.bit.nsq.exceptions.RequeueWithoutBackoff;
 import ly.bit.nsq.sync.BatchReader;
 import ly.bit.nsq.sync.SyncHandler;
-import org.apache.lucene.util.ThreadInterruptedException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -143,18 +142,24 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
         logger.info("closing nsq river => [{}]", this.workers);
 
-        if (this.thread != null) {
-            for (Thread aThread : this.thread) {
-                aThread.interrupt();
+        try {
+            if (this.thread != null) {
+                for (Thread aThread : this.thread) {
+                    aThread.interrupt();
+                }
             }
+        } finally {
+            this.thread = null;
         }
-        this.thread = null;
 
-        logger.info("creating nsq river executor");
-        if (this.timer != null) {
-            this.timer.shutdownNow();
+        try {
+            logger.info("creating nsq river executor");
+            if (this.timer != null) {
+                this.timer.shutdownNow();
+            }
+        } finally {
+            this.timer = null;
         }
-        this.timer = null;
     }
 
     class MessageBatchTimerTask implements Runnable {

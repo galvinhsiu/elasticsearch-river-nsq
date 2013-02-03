@@ -22,14 +22,17 @@ NSQ River allows to automatically index a [NSQ](https://github.com/bitly/nsq) to
 	{ "create" : { "_index" : "twitter", "_type" : "tweet", "_id" : "1" } }
 	{ "tweet" : { "text" : "another tweet" } }    
 
-Creating the rabbitmq river is as simple as (all configuration parameters are provided, with default values):
+Creating the nsq river is as simple as (all configuration parameters are provided, with default values):
 
     curl -XPUT 'localhost:9200/_river/my_river/_meta' -d '{
         "type" : "nsq",
         "nsq" : {
             "address" : "http://localhost:4161/",
             "topic" : "elasticsearch",
-            "channel" : "elasticsearch"
+            "channel" : "elasticsearch",
+            "max_inflight" : 10,
+            "max_retries" : 5,
+            "requeue_deplay" : 5,
         },
         "index" : {
             "workers" : 10,
