@@ -19,7 +19,11 @@ public class SyncLookupd extends AbstractLookupd {
 	public List<String> query(String topic) {
 		URL url = null;
 		try {
-			url = new URL(this.addr + "/lookup?topic=" + topic);
+            if (this.addr.endsWith(("/"))) {
+                url = new URL(this.addr + "lookup?topic=" + topic);
+            } else {
+                url = new URL(this.addr + "/lookup?topic=" + topic);
+            }
 		} catch (MalformedURLException e) {
             LOGGER.log(Level.SEVERE, e.getMessage(), e);
 		}
