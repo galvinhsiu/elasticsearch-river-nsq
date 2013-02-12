@@ -77,6 +77,7 @@ public class SyncConnection extends Connection {
 					try {
 						response = readResponse();
 					} catch (NSQException e) {
+                        LOGGER.log(Level.SEVERE, e.getMessage(), e);
 						// Assume this meant that we couldn't read somehow, should close the connection
 						close();
 						break;

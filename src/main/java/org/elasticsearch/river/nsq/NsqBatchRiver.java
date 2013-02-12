@@ -3,7 +3,6 @@ package org.elasticsearch.river.nsq;
 import ly.bit.nsq.ConnectionUtils;
 import ly.bit.nsq.Message;
 import ly.bit.nsq.exceptions.NSQException;
-import ly.bit.nsq.exceptions.RequeueWithoutBackoff;
 import ly.bit.nsq.sync.BatchReader;
 import ly.bit.nsq.sync.SyncHandler;
 import org.elasticsearch.action.ActionListener;
@@ -255,15 +254,17 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
                     bulkRequestBuilder = client.prepareBulk();
                 }
 
-                try {
-                    bulkRequestBuilder.add(message.getBody(), 0, message.getBody().length, true);
-                    worklist.add(message);
+                if (bulkRequestBuilder != null) {
+                    try {
+                        bulkRequestBuilder.add(message.getBody(), 0, message.getBody().length, false);
+                        worklist.add(message);
 
-                    if (bulkRequestBuilder.numberOfActions() >= bulkSize) {
-                        break;
+                        if (bulkRequestBuilder.numberOfActions() >= bulkSize) {
+                            break;
+                        }
+                    } catch (Exception e) {
+                        logger.error("failed to add a message - " + "[" + message.getBody().length + "]" + new String(message.getBody()), e);
                     }
-                } catch (Exception e) {
-                    logger.error("failed to add a message", e);
                 }
             }
 
