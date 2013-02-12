@@ -34,13 +34,13 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
     private static final String DEFAULT_CHANNEL = "elasticsearch";
 
     private static final int DEFAULT_BULKSIZE = 200;
-    private static final int DEFAULT_BULKTIMEOUT = 500;
+    private static final int DEFAULT_BULKTIMEOUT = 1000;
     private static final int DEFAULT_WORKERS = 1;
     private static final boolean DEFAULT_ORDERED  = false;
 
     private static final int DEFAULT_REQUEUE_DELAY = 50;
     private static final int DEFAULT_MAX_RETRIES = 2;
-    private static final int DEFAULT_MAX_INFLIGHT = 10;
+    private static final int DEFAULT_MAX_INFLIGHT = 25;
 
     private final Client client;
 
@@ -186,8 +186,8 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
         }
 
         protected void process(BulkRequestBuilder bulkRequestBuilder, final List<Message> messages_to_execute) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("processing tasks " + bulkRequestBuilder.numberOfActions());
+            if (logger.isInfoEnabled()) {
+                logger.info("processing tasks " + bulkRequestBuilder.numberOfActions());
             }
 
             if (ordered) {
@@ -234,6 +234,10 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
                     }
                 });
             }
+
+            if (logger.isInfoEnabled()) {
+                logger.info("processed tasks");
+            }
         }
 
         public void run() {
@@ -241,29 +245,29 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
                 logger.debug("Running executor...");
             }
 
+            BulkRequestBuilder bulkRequestBuilder = null;
+
             List<Message> worklist = new ArrayList<Message>();
             while (messages.peek() != null) {
                 Message message = messages.poll();
-                worklist.add(message);
+
+                if (worklist.isEmpty()) {
+                    bulkRequestBuilder = client.prepareBulk();
+                }
+
+                try {
+                    bulkRequestBuilder.add(message.getBody(), 0, message.getBody().length, true);
+                    worklist.add(message);
+
+                    if (bulkRequestBuilder.numberOfActions() >= bulkSize) {
+                        break;
+                    }
+                } catch (Exception e) {
+                    logger.error("failed to add a message", e);
+                }
             }
 
             if (!worklist.isEmpty()) {
-                BulkRequestBuilder bulkRequestBuilder = client.prepareBulk();
-
-                for (Message message : worklist) {
-                    try {
-                        bulkRequestBuilder.add(message.getBody(), 0, message.getBody().length, true);
-
-                        if (bulkRequestBuilder.numberOfActions() >= bulkSize) {
-                            break;
-                        }
-                    } catch (RequeueWithoutBackoff e) {
-                        requeueMessage(message, false);
-                    } catch (Exception e) {
-                        logger.error("failed to add a message", e);
-                    }
-                }
-
                 process(bulkRequestBuilder, worklist);
             }
         }
