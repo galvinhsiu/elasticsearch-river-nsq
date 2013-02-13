@@ -38,7 +38,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
     private static final boolean DEFAULT_ORDERED  = false;
     private static final int DEFAULT_BUFFER = 100000;
 
-    private static final int DEFAULT_REQUEUE_DELAY = 15;
+    private static final int DEFAULT_REQUEUE_DELAY = 15000;
     private static final int DEFAULT_MAX_RETRIES = 2;
     private static final int DEFAULT_MAX_INFLIGHT = 1;
 

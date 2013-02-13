@@ -5,9 +5,10 @@ import ly.bit.nsq.exceptions.NSQException;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.nio.ByteBuffer;
 
 public class SyncConnection extends Connection {
 
@@ -41,18 +42,18 @@ public class SyncConnection extends Connection {
 	}
 	
 	public byte[] unpackResponse() throws NSQException{
-		try{
+        try{
             byte[] data_size = new byte[4];
             this.inputStream.read(data_size);
 
             ByteBuffer buffer = ByteBuffer.wrap(data_size);
-			int data_length = buffer.getInt();
+            buffer.order(ByteOrder.BIG_ENDIAN);
+			long data_length = buffer.getInt();
 
-            byte[] return_value = new byte[data_length];
-            int read_count = this.inputStream.read(return_value, 0, data_length);
-
-			return return_value;
-		}catch(IOException e){
+            byte[] return_value = new byte[ (int) data_length];
+            this.inputStream.read(return_value);
+            return  return_value;
+		} catch(IOException e){
 			throw new NSQException(e);
 		}
 	}
@@ -72,7 +73,7 @@ public class SyncConnection extends Connection {
 	public void readForever() {
 		class ReadThis implements Runnable {
 			public void run() {
-				while(closed.get() != true){
+				while(!closed.get()){
 					byte[] response = null;
 					try {
 						response = unpackResponse();
@@ -103,7 +104,7 @@ public class SyncConnection extends Connection {
 	@Override
 	public void close() {
 		boolean prev = this.closed.getAndSet(true);
-		if(prev == true){
+		if(prev){
 			return;
 		}
 		LOGGER.log(Level.INFO, "Closing connection " + this.toString());

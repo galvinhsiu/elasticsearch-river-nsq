@@ -2,10 +2,8 @@ package ly.bit.nsq;
 
 import ly.bit.nsq.exceptions.NSQException;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -66,23 +64,21 @@ public abstract class Connection {
     public abstract void close();
 
     public Message decodeMessage(byte[] data) throws NSQException {
-        DataInputStream ds = new DataInputStream(new ByteArrayInputStream(data));
-        try {
-            long timestamp = ds.readLong(); // 8 bytes
-            short attempts = ds.readShort(); // 2 bytes
-            byte[] id = new byte[16];
-            ds.read(id);
-            byte[] body = new byte[data.length - 26];
-            ds.read(body);
+        ByteBuffer buffer = ByteBuffer.wrap(data);
+        buffer.order(ByteOrder.BIG_ENDIAN);
 
-            return new Message(id, body, timestamp, attempts, this);
-        } catch (IOException e) {
-            throw new NSQException(e);
-        }
+        long timestamp = buffer.getLong(); // 8 bytes
+        short attempts = buffer.getShort(); // 2 bytes
+        byte[] id = new byte[16];
+        buffer.get(id);
+        byte[] body = new byte[data.length - 26];
+        buffer.get(body);
+
+        return new Message(id, body, timestamp, attempts, this);
     }
 
     public void handleResponse(byte[] response) throws NSQException {
-        if (response.length <= 4) {
+        if (response.length < 4) {
             return;
         }
 
@@ -91,7 +87,7 @@ public abstract class Connection {
         FrameType ft = FrameType.fromInt(frame_id);
         switch (ft) {
             case FRAMETYPERESPONSE:
-                if (new String(response).equals("_heartbeat_")) {
+                if ("_heartbeat_".equals(new String(response).trim())) {
                     this.send(ConnectionUtils.nop());
                 }
 
