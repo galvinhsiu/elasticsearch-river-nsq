@@ -4,7 +4,7 @@ import ly.bit.nsq.ConnectionUtils;
 import ly.bit.nsq.Message;
 import ly.bit.nsq.exceptions.NSQException;
 import ly.bit.nsq.sync.BatchReader;
-import ly.bit.nsq.sync.SyncHandler;
+import ly.bit.nsq.MessageHandler;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
-import java.io.IOException;
 
 /**
  *
@@ -250,10 +249,8 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
                         }
 
                         if (bulkRequestBuilder != null) {
-                            byte[] trimmed_data = new String(message.getBody()).trim().getBytes();
-
                             try {
-                                bulkRequestBuilder.add(trimmed_data, 0, trimmed_data.length, false);
+                                bulkRequestBuilder.add(message.getBody(), 0, message.getBody().length, false);
                                 finishMessage(message);
 
                                 if (bulkRequestBuilder.numberOfActions() >= bulkSize) {
@@ -262,9 +259,8 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
                             } catch (Exception e) {
                                 ByteArrayOutputStream bos = new ByteArrayOutputStream(message.getBody().length);
                                 bos.write(message.getBody(), 0, message.getBody().length);
-                                logger.error("TESTTEST" + bos.toString());
 
-                                logger.error("failed to add a message (x2) - " + "[" + message.getBody().length + "]" + new String(message.getBody()), e);
+                                logger.error("failed to add a message - " + "[" + message.getBody().length + "]" + new String(message.getBody()), e);
                                 requeueMessage(message, true);
                                 break;
                             }
@@ -283,12 +279,13 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
         }
     }
 
-    private class Consumer implements Runnable, SyncHandler {
+    private class Consumer implements Runnable, MessageHandler {
 
         @Override
         public boolean handleMessage(Message msg) throws NSQException {
             try {
                 messages.put(msg);
+                msg.getConn().send(ConnectionUtils.touch(msg.getId()));
                 return true;
             } catch(InterruptedException ie) {
                 return false;

@@ -22,7 +22,7 @@ package org.elasticsearch.river.nsq;
 import ly.bit.nsq.Message;
 import ly.bit.nsq.SyncConnection;
 import ly.bit.nsq.exceptions.NSQException;
-import ly.bit.nsq.sync.SyncHandler;
+import ly.bit.nsq.MessageHandler;
 import ly.bit.nsq.sync.SyncReader;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.node.Node;
@@ -35,7 +35,7 @@ import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 /**
  *
  */
-public class NsqRiverTest implements SyncHandler {
+public class NsqRiverTest implements MessageHandler {
 
     public NsqRiverTest() {
     }

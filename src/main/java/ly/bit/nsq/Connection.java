@@ -78,6 +78,10 @@ public abstract class Connection {
     }
 
     public void handleResponse(byte[] response) throws NSQException {
+        if (response.length < 4) {
+            throw new NSQException("Invalid framed response, needs to be at least 4 bytes!");
+        }
+
         ByteBuffer buffer = ByteBuffer.wrap(response, 0, 4);
         int frame_id = buffer.getInt();
         FrameType ft = FrameType.fromInt(frame_id);

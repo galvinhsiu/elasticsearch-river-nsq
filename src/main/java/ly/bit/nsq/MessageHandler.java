@@ -1,4 +1,4 @@
-package ly.bit.nsq.sync;
+package ly.bit.nsq;
 
 import ly.bit.nsq.Message;
 import ly.bit.nsq.exceptions.NSQException;
@@ -6,7 +6,7 @@ import ly.bit.nsq.exceptions.NSQException;
 /**
  * @author dan
  *
- * A SyncHandler processes a message and indicates success synchronously.
+ * A MessageHandler processes a message and indicates success synchronously.
  * It returns true to indicate successful processing, and returns false to
  * indicate that there was an error and the message should be requeued.
  * 
@@ -14,7 +14,7 @@ import ly.bit.nsq.exceptions.NSQException;
  * can be thrown to trigger an immediate requeue.
  *
  */
-public interface SyncHandler {
+public interface MessageHandler {
 
 	public boolean handleMessage(Message msg) throws NSQException;
 

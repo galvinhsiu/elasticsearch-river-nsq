@@ -34,7 +34,11 @@ public final class ConnectionUtils {
 	public static String ready(int count){
 		return command("RDY", Integer.toString(count));
 	}
-	
+
+    public static String touch(byte[] id) {
+        return command("TOUCH", new String(id));
+    }
+
 	public static String finish(byte[] id){
 		return command("FIN", new String(id));
 	}
