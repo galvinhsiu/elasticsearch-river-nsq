@@ -14,7 +14,7 @@ public enum FrameType {
 		case 2:
 			return FrameType.FRAMETYPEMESSAGE;
 		default:
-			throw new NSQException("Invalid Frame Type");
+            throw new NSQException("Invalid frame type! => " + typeId);
 		}
 	}
 }

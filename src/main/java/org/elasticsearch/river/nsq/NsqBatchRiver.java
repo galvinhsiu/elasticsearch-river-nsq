@@ -36,10 +36,11 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
     private static final int DEFAULT_BULKTIMEOUT = 1000;
     private static final int DEFAULT_WORKERS = 1;
     private static final boolean DEFAULT_ORDERED  = false;
+    private static final int DEFAULT_BUFFER = 100000;
 
-    private static final int DEFAULT_REQUEUE_DELAY = 50;
+    private static final int DEFAULT_REQUEUE_DELAY = 15;
     private static final int DEFAULT_MAX_RETRIES = 2;
-    private static final int DEFAULT_MAX_INFLIGHT = 25;
+    private static final int DEFAULT_MAX_INFLIGHT = 1;
 
     private final Client client;
 
@@ -60,7 +61,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
     private volatile boolean closed = false;
     private volatile Thread[] thread;
 
-    private ConcurrentLinkedQueue<Message> messages = new ConcurrentLinkedQueue<Message>();
+    private BlockingQueue<Message> messages;
     private ScheduledExecutorService timer;
 
     @SuppressWarnings({"unchecked"})
@@ -118,6 +119,8 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
     @Override
     public void start() {
+        messages = new ArrayBlockingQueue<Message>(DEFAULT_BUFFER);
+
         ThreadFactory factory = EsExecutors.daemonThreadFactory(settings.globalSettings(), "nsq_river");
 
         logger.info("creating nsq river, addresses [{}] => [{}]", nsqAddresses, this.workers);
@@ -137,7 +140,12 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
         if (closed) {
             return;
         }
+
         closed = true;
+
+        if (messages != null) {
+            messages.clear();
+        }
 
         logger.info("closing nsq river => [{}]", this.workers);
 
@@ -184,7 +192,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
             }
         }
 
-        protected void process(BulkRequestBuilder bulkRequestBuilder, final List<Message> messages_to_execute) {
+        protected void process(BulkRequestBuilder bulkRequestBuilder) {
             if (logger.isInfoEnabled()) {
                 logger.info("processing tasks " + bulkRequestBuilder.numberOfActions());
             }
@@ -194,10 +202,6 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
                     BulkResponse bulk_response = bulkRequestBuilder.execute().actionGet();
                     if (bulk_response.hasFailures()) {
                         logger.warn("failed to execute" + bulk_response.buildFailureMessage());
-                    }
-
-                    for (Message message : messages_to_execute) {
-                        finishMessage(message);
                     }
                 } catch (Exception e) {
                     logger.warn("failed to execute bulk", e);
@@ -209,26 +213,14 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
                         if (bulk_response.hasFailures()) {
                             logger.warn("failed to execute" + bulk_response.buildFailureMessage());
                         }
-
-                        for (Message message : messages_to_execute) {
-                            finishMessage(message);
-                        }
                     }
 
                     @Override
                     public void onFailure(Throwable e) {
                         if (e instanceof InvalidIndexNameException) {
                             logger.warn("failed to execute bulk, dropping message", e);
-
-                            for (Message message : messages_to_execute) {
-                                finishMessage(message);
-                            }
                         } else {
                             logger.warn("failed to execute bulk, requeuing message", e);
-
-                            for (Message message : messages_to_execute) {
-                                requeueMessage(message, true);
-                            }
                         }
                     }
                 });
@@ -246,30 +238,39 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
             BulkRequestBuilder bulkRequestBuilder = null;
 
-            List<Message> worklist = new ArrayList<Message>();
-            while (messages.peek() != null) {
-                Message message = messages.poll();
+            while (true) {
+                try {
+                    Message message = messages.poll(10, TimeUnit.MILLISECONDS);
 
-                if (worklist.isEmpty()) {
-                    bulkRequestBuilder = client.prepareBulk();
-                }
-
-                if (bulkRequestBuilder != null) {
-                    try {
-                        bulkRequestBuilder.add(message.getBody(), 0, message.getBody().length, false);
-                        worklist.add(message);
-
-                        if (bulkRequestBuilder.numberOfActions() >= bulkSize) {
-                            break;
+                    if (message != null) {
+                        if (bulkRequestBuilder == null) {
+                            bulkRequestBuilder = client.prepareBulk();
                         }
-                    } catch (Exception e) {
-                        logger.error("failed to add a message - " + "[" + message.getBody().length + "]" + new String(message.getBody()), e);
+
+                        if (bulkRequestBuilder != null) {
+                            try {
+                                bulkRequestBuilder.add(message.getBody(), 0, message.getBody().length, false);
+                                finishMessage(message);
+
+                                if (bulkRequestBuilder.numberOfActions() >= bulkSize) {
+                                    break;
+                                }
+                            } catch (Exception e) {
+                                logger.error("failed to add a message (x2) - " + "[" + message.getBody().length + "]" + new String(message.getBody()), e);
+                                requeueMessage(message, true);
+                                break;
+                            }
+                        }
+                    } else {
+                        break;
                     }
+                } catch(InterruptedException ie) {
+                    break;
                 }
             }
 
-            if (!worklist.isEmpty()) {
-                process(bulkRequestBuilder, worklist);
+            if (bulkRequestBuilder != null && bulkRequestBuilder.numberOfActions() > 0) {
+                process(bulkRequestBuilder);
             }
         }
     }
@@ -278,8 +279,12 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
         @Override
         public boolean handleMessage(Message msg) throws NSQException {
-            messages.add(msg);
-            return true;
+            try {
+                messages.put(msg);
+                return true;
+            } catch(InterruptedException ie) {
+                return false;
+            }
         }
 
         @Override

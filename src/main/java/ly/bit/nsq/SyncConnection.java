@@ -7,6 +7,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.nio.ByteBuffer;
 
 public class SyncConnection extends Connection {
 
@@ -39,19 +40,18 @@ public class SyncConnection extends Connection {
 		}
 	}
 	
-	public byte[] readN(int size) throws IOException{
-		// Going with a super naive impl first...
-		byte[] data = new byte[size];
-		this.inputStream.read(data);
-		return data;
-	}
-	
-	public byte[] readResponse() throws NSQException{
+	public byte[] unpackResponse() throws NSQException{
 		try{
-			DataInputStream ds = new DataInputStream(this.inputStream);
-			int size = ds.readInt();
-			byte[] data = this.readN(size);
-			return data;
+            byte[] data_size = new byte[4];
+            this.inputStream.read(data_size);
+
+            ByteBuffer buffer = ByteBuffer.wrap(data_size);
+			int data_length = buffer.getInt();
+
+            byte[] return_value = new byte[data_length];
+            int read_count = this.inputStream.read(return_value, 0, data_length);
+
+			return return_value;
 		}catch(IOException e){
 			throw new NSQException(e);
 		}
@@ -73,20 +73,26 @@ public class SyncConnection extends Connection {
 		class ReadThis implements Runnable {
 			public void run() {
 				while(closed.get() != true){
-					byte[] response;
+					byte[] response = null;
 					try {
-						response = readResponse();
+						response = unpackResponse();
 					} catch (NSQException e) {
                         LOGGER.log(Level.SEVERE, e.getMessage(), e);
 						// Assume this meant that we couldn't read somehow, should close the connection
 						close();
 						break;
 					}
-					try {
-						handleResponse(response);
-					} catch (NSQException e) {
-                        LOGGER.log(Level.WARNING, e.getMessage(), e);
-					}
+
+                    if (response != null) {
+                        try {
+                            handleResponse(response);
+                        } catch (NSQException e) {
+                            LOGGER.log(Level.WARNING, e.getMessage(), e);
+
+                            close();
+                            break;
+                        }
+                    }
 				}
 			}
 		}
@@ -100,7 +106,7 @@ public class SyncConnection extends Connection {
 		if(prev == true){
 			return;
 		}
-		LOGGER.log(Level.FINE, "Closing connection " + this.toString());
+		LOGGER.log(Level.INFO, "Closing connection " + this.toString());
 		try {
 			this.sock.close();
 		} catch (IOException e) {

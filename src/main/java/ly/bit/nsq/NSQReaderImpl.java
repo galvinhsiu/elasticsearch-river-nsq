@@ -102,7 +102,7 @@ public abstract class NSQReaderImpl implements NSQReader {
 		Connection conn = new SyncConnection(address, port, this);
 		String connId = conn.toString();
 		Connection stored = this.connections.putIfAbsent(connId, conn);
-		if(stored != null){
+		if(stored != null && !stored.closed.get()){
 			return;
 		}
 		conn.connect();
