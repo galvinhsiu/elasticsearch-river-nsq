@@ -12,6 +12,8 @@ import java.util.logging.Logger;
 
 public class SyncConnection extends Connection {
 
+    private static final int BUFFER_SIZE = 4096;
+
     private static final Logger LOGGER = Logger.getLogger(SyncConnection.class.getName());
 
 	private Socket sock;
@@ -48,11 +50,22 @@ public class SyncConnection extends Connection {
 
             ByteBuffer buffer = ByteBuffer.wrap(data_size);
             buffer.order(ByteOrder.BIG_ENDIAN);
-			long data_length = buffer.getInt();
+			int data_length = buffer.getInt();
 
-            byte[] return_value = new byte[ (int) data_length];
-            this.inputStream.read(return_value);
-            return  return_value;
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            int remaining_bytes = data_length;
+            byte[] scratch = new byte[BUFFER_SIZE];
+            while (remaining_bytes > 0) {
+                int target_read = remaining_bytes >= BUFFER_SIZE ? BUFFER_SIZE : remaining_bytes;
+                int read_bytes = this.inputStream.read(scratch, 0, target_read);
+
+                if (read_bytes > 0) {
+                    remaining_bytes -= read_bytes;
+                    output.write(scratch, 0, read_bytes);
+                }
+            }
+
+            return output.toByteArray();
 		} catch(IOException e){
 			throw new NSQException(e);
 		}

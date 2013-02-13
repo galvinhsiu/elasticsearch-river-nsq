@@ -77,7 +77,6 @@ public abstract class NSQReaderImpl implements NSQReader {
 		if(msg.getAttempts() > this.maxRetries){
 			// TODO log giving up
 			this.finishMessage(msg);
-			return;
 		}else{
 			int newDelay = doDelay ? 0 : this.requeueDelay * msg.getAttempts();
 			try {

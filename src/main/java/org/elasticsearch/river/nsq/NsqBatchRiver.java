@@ -19,10 +19,12 @@ import org.elasticsearch.river.River;
 import org.elasticsearch.river.RiverName;
 import org.elasticsearch.river.RiverSettings;
 
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.io.IOException;
 
 /**
  *
@@ -248,14 +250,20 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
                         }
 
                         if (bulkRequestBuilder != null) {
+                            byte[] trimmed_data = new String(message.getBody()).trim().getBytes();
+
                             try {
-                                bulkRequestBuilder.add(message.getBody(), 0, message.getBody().length, false);
+                                bulkRequestBuilder.add(trimmed_data, 0, trimmed_data.length, false);
                                 finishMessage(message);
 
                                 if (bulkRequestBuilder.numberOfActions() >= bulkSize) {
                                     break;
                                 }
                             } catch (Exception e) {
+                                ByteArrayOutputStream bos = new ByteArrayOutputStream(message.getBody().length);
+                                bos.write(message.getBody(), 0, message.getBody().length);
+                                logger.error("TESTTEST" + bos.toString());
+
                                 logger.error("failed to add a message (x2) - " + "[" + message.getBody().length + "]" + new String(message.getBody()), e);
                                 requeueMessage(message, true);
                                 break;

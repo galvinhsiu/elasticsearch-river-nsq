@@ -78,10 +78,6 @@ public abstract class Connection {
     }
 
     public void handleResponse(byte[] response) throws NSQException {
-        if (response.length < 4) {
-            return;
-        }
-
         ByteBuffer buffer = ByteBuffer.wrap(response, 0, 4);
         int frame_id = buffer.getInt();
         FrameType ft = FrameType.fromInt(frame_id);
@@ -101,7 +97,6 @@ public abstract class Connection {
                 String errMsg = new String(Arrays.copyOfRange(response, 4, response.length));
                 throw new NSQException(errMsg);
         }
-
     }
 
     public String toString() {
