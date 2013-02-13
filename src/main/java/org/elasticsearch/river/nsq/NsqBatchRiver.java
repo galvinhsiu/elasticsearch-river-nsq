@@ -285,7 +285,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
         public boolean handleMessage(Message msg) throws NSQException {
             try {
                 messages.put(msg);
-                msg.getConn().send(ConnectionUtils.touch(msg.getId()));
+                //msg.getConn().send(ConnectionUtils.touch(msg.getId()));
                 return true;
             } catch(InterruptedException ie) {
                 return false;
