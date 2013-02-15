@@ -37,11 +37,11 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
     private static final int DEFAULT_BULKTIMEOUT = 1000;
     private static final int DEFAULT_WORKERS = 1;
     private static final boolean DEFAULT_ORDERED  = false;
-    private static final int DEFAULT_BUFFER = 100000;
 
     private static final int DEFAULT_REQUEUE_DELAY = 15000;
     private static final int DEFAULT_MAX_RETRIES = 2;
     private static final int DEFAULT_MAX_INFLIGHT = 1;
+    private static final int DEFAULT_MAX_BUFFER = 100000;
 
     private final Client client;
 
@@ -49,6 +49,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
     private final String nsqTopic;
     private final String nsqChannel;
+    private final int nsqBufferSize;
 
     private final int workers;
     private final int bulkSize;
@@ -87,6 +88,8 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
             nsqTopic = XContentMapValues.nodeStringValue(nsqSettings.get("topic"), DEFAULT_TOPIC);
             nsqChannel = XContentMapValues.nodeStringValue(nsqSettings.get("channel"), DEFAULT_CHANNEL);
+            nsqBufferSize = XContentMapValues.nodeIntegerValue(nsqSettings.get("max_buffer_size"), DEFAULT_MAX_BUFFER);
+
             maxInFlight = XContentMapValues.nodeIntegerValue(nsqSettings.get("max_inflight"), DEFAULT_MAX_INFLIGHT);
             maxRetries = XContentMapValues.nodeIntegerValue(nsqSettings.get("max_retries"), DEFAULT_MAX_RETRIES);
             requeueDelay = XContentMapValues.nodeIntegerValue(nsqSettings.get("requeue_delay"), DEFAULT_REQUEUE_DELAY);
@@ -95,6 +98,8 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
             nsqTopic = DEFAULT_TOPIC;
             nsqChannel = DEFAULT_CHANNEL;
+            nsqBufferSize = DEFAULT_MAX_BUFFER;
+
             maxInFlight = DEFAULT_MAX_INFLIGHT;
             maxRetries = DEFAULT_MAX_RETRIES;
             requeueDelay = DEFAULT_REQUEUE_DELAY;
@@ -120,7 +125,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
     @Override
     public void start() {
-        messages = new ArrayBlockingQueue<Message>(DEFAULT_BUFFER);
+        messages = new ArrayBlockingQueue<Message>(nsqBufferSize);
 
         ThreadFactory factory = EsExecutors.daemonThreadFactory(settings.globalSettings(), "nsq_river");
 
@@ -285,7 +290,6 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
         public boolean handleMessage(Message msg) throws NSQException {
             try {
                 messages.put(msg);
-                //msg.getConn().send(ConnectionUtils.touch(msg.getId()));
                 return true;
             } catch(InterruptedException ie) {
                 return false;
