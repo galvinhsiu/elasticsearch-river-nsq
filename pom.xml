@@ -21,7 +21,7 @@
     <scm>
         <connection>scm:git:git@github.com:galvinhsiu/elasticsearch-river-nsq.git</connection>
         <developerConnection>scm:git:git@github.com:galvinhsiu/elasticsearch-river-nsq.git</developerConnection>
-        <url>http://github.com/galvinhsiu/elasticsearch-river-nsq</url>
+        <url>scm:git:git@github.com/galvinhsiu/elasticsearch-river-nsq.git</url>
     </scm>
 
     <parent>
