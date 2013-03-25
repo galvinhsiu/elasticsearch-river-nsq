@@ -11,8 +11,18 @@ In order to install the plugin, simply run: `bin/plugin -install elasticsearch/e
     --------------------------------------------------------
     | NSQ Plugin      | ElasticSearch    | NSQ Daemon      |
     --------------------------------------------------------
-    | master          | 0.19 -> master   | 0.2.16          |
+    | master          | 0.90 -> master   | 0.2.18          |
     --------------------------------------------------------
+    | 1.0.1           | 0.19 -> 0.20.5   | 0.2.18          |
+    --------------------------------------------------------
+
+Binary releases are @ :
+
+    https://sourceforge.net/projects/es-river-nsq/files/
+
+Installation of binary releases:
+
+    ./plugin -url https://downloads.sourceforge.net/project/es-river-nsq/elasticsearch-river-nsq-1.0.1.zip -install elasticsearch-river-nsq
 
 NSQ River allows to automatically index a [NSQ](https://github.com/bitly/nsq) topic / channel. The format of the messages follows the bulk api format:
 
