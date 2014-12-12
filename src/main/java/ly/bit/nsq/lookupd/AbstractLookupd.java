@@ -49,12 +49,5 @@ public abstract class AbstractLookupd {
 		}
 		return outputs;
 	}
-	
-	public static void main(String... args){
-		String response = "{\"status_code\":200,\"status_txt\":\"OK\",\"data\":{\"channels\":[\"social_graph_input\"],\"producers\":[{\"address\":\"dev.bitly.org\",\"tcp_port\":4150,\"http_port\":4151,\"version\":\"0.2.16-alpha\"}]}}";
-//		for (String addr : parseResponseForProducers(response)){
-//			System.out.println(addr);
-//		}
-	}
-	
+
 }

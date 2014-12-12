@@ -17,23 +17,24 @@ public class SyncLookupd extends AbstractLookupd {
 
 	@Override
 	public List<String> query(String topic) {
-		URL url = null;
 		try {
+			URL url = null;
+
             if (this.addr.endsWith(("/"))) {
                 url = new URL(this.addr + "lookup?topic=" + topic);
             } else {
                 url = new URL(this.addr + "/lookup?topic=" + topic);
             }
-		} catch (MalformedURLException e) {
-            LOGGER.log(Level.SEVERE, e.getMessage(), e);
-		}
-		try {
+
 			InputStream is = url.openStream();
 			BufferedReader br = new BufferedReader(new InputStreamReader(is));
 			return parseResponseForProducers(br);
+		} catch (MalformedURLException e) {
+            LOGGER.log(Level.SEVERE, e.getMessage(), e);
 		} catch (IOException e) {
-            LOGGER.log(Level.WARNING, e.getMessage(), e);
+			LOGGER.log(Level.WARNING, e.getMessage(), e);
 		}
+
 		return new LinkedList<String>();
 	}
 

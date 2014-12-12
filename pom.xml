@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.elasticsearch</groupId>
     <artifactId>elasticsearch-river-nsq</artifactId>
-    <version>1.0.2-SNAPSHOT</version>
+    <version>1.0.3-SNAPSHOT</version>
     <packaging>jar</packaging>
     <description>NSQ River for ElasticSearch</description>
     <inceptionYear>2009</inceptionYear>
@@ -29,7 +29,7 @@
     </parent>
 
     <properties>
-        <elasticsearch.version>0.90.0</elasticsearch.version>
+        <elasticsearch.version>0.90.13</elasticsearch.version>
     </properties>
 
     <repositories>
