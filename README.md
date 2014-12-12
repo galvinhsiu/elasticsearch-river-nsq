@@ -43,6 +43,7 @@ Creating the nsq river is as simple as (all configuration parameters are provide
             "max_inflight" : 10,
             "max_retries" : 5,
             "requeue_delay" : 5,
+            "poll_delay" : 10,
         },
         "index" : {
             "workers" : 10,

@@ -37,6 +37,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
     private static final int DEFAULT_BULKTIMEOUT = 1000;
     private static final int DEFAULT_WORKERS = 1;
     private static final boolean DEFAULT_ORDERED  = false;
+    private static final int DEFAULT_POLL_MILLISECONDS = 10;
 
     private static final int DEFAULT_REQUEUE_DELAY = 15000;
     private static final int DEFAULT_MAX_RETRIES = 2;
@@ -50,6 +51,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
     private final String nsqTopic;
     private final String nsqChannel;
     private final int nsqBufferSize;
+    private final int pollDelay;
 
     private final int workers;
     private final int bulkSize;
@@ -93,6 +95,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
             maxInFlight = XContentMapValues.nodeIntegerValue(nsqSettings.get("max_inflight"), DEFAULT_MAX_INFLIGHT);
             maxRetries = XContentMapValues.nodeIntegerValue(nsqSettings.get("max_retries"), DEFAULT_MAX_RETRIES);
             requeueDelay = XContentMapValues.nodeIntegerValue(nsqSettings.get("requeue_delay"), DEFAULT_REQUEUE_DELAY);
+            pollDelay = XContentMapValues.nodeIntegerValue(nsqSettings.get("poll_delay"), DEFAULT_POLL_MILLISECONDS);
         } else {
             nsqAddresses = new String[]{"http://localhost:4161"};
 
@@ -103,6 +106,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
             maxInFlight = DEFAULT_MAX_INFLIGHT;
             maxRetries = DEFAULT_MAX_RETRIES;
             requeueDelay = DEFAULT_REQUEUE_DELAY;
+            pollDelay = DEFAULT_POLL_MILLISECONDS;
         }
 
         if (settings.settings().containsKey("index")) {
@@ -246,7 +250,7 @@ public class NsqBatchRiver extends AbstractRiverComponent implements River {
 
             while (true) {
                 try {
-                    Message message = messages.poll(10, TimeUnit.MILLISECONDS);
+                    Message message = messages.poll(pollDelay, TimeUnit.MILLISECONDS);
 
                     if (message != null) {
                         if (bulkRequestBuilder == null) {
