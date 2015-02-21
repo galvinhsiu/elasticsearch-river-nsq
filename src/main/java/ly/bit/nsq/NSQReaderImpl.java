@@ -3,6 +3,7 @@ package ly.bit.nsq;
 import ly.bit.nsq.exceptions.NSQException;
 import ly.bit.nsq.lookupd.AbstractLookupd;
 import ly.bit.nsq.lookupd.SyncLookupdJob;
+import ly.bit.nsq.util.ConnectionUtils;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -98,7 +99,9 @@ public abstract class NSQReaderImpl implements NSQReader {
 	}
 	
 	public void connectToNsqd(String address, int port) throws NSQException{
-		Connection conn = new SyncConnection(address, port, this);
+		Connection conn = new SyncConnection();
+        conn.init(address, port, this);
+
 		String connId = conn.toString();
 		Connection stored = this.connections.putIfAbsent(connId, conn);
 		if(stored != null && !stored.closed.get()){

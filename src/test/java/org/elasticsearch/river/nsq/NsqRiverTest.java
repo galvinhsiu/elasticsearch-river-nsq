@@ -24,6 +24,7 @@ import ly.bit.nsq.SyncConnection;
 import ly.bit.nsq.exceptions.NSQException;
 import ly.bit.nsq.MessageHandler;
 import ly.bit.nsq.sync.SyncReader;
+import ly.bit.nsq.util.ConnectionUtils;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
@@ -68,12 +69,20 @@ public class NsqRiverTest implements MessageHandler {
 
         Thread.sleep(1000);
 
-        SyncConnection conn = new SyncConnection("localhost", 4150, reader);
+        SyncConnection conn = new SyncConnection();
+        conn.init("localhost", 4150, reader);
         conn.connect();
-//        conn.send(ConnectionUtils.pub("elasticsearch"), message.getBytes());
+
+        for(int i = 0; i < 1; i++) {
+            System.out.println("Sending over message " + i);
+            System.out.println(message);
+            conn.send(ConnectionUtils.pub("elasticsearch"), message.getBytes());
+            Thread.sleep(10000);
+        }
+
+        System.out.println("Closing connection");
         conn.close();
 
-        Thread.sleep(100000);
-
+        reader.shutdown();
     }
 }

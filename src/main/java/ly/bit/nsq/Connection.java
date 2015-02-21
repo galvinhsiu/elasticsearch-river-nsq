@@ -1,15 +1,18 @@
 package ly.bit.nsq;
 
-import ly.bit.nsq.exceptions.NSQException;
-
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import ly.bit.nsq.exceptions.NSQException;
+import ly.bit.nsq.util.ConnectionUtils;
+import ly.bit.nsq.util.FrameType;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 
 /**
  * @author dan
@@ -23,19 +26,15 @@ import java.util.logging.Logger;
  *         We can all revisit as we flesh more stuff out.
  */
 public abstract class Connection {
-
-    private static Logger LOGGER = Logger.getLogger(Connection.class.getName());
+    private static final Logger log = Logger.getLogger(Connection.class.getName());
 
     protected NSQReader reader;
     protected String host;
     protected int port;
-    protected AtomicInteger readyCount;
+    protected AtomicInteger readyCount = new AtomicInteger();
     protected int maxInFlight; // TODO maybe replace this with something from reader, or else just set it from there
     protected AtomicBoolean closed = new AtomicBoolean(false);
 
-    protected void init() {
-        this.readyCount = new AtomicInteger(); // will init to 0, but that is fine on startup
-    }
 
     public void messageReceivedCallback(Message message) {
         int curReady = this.readyCount.decrementAndGet();
@@ -47,7 +46,7 @@ public abstract class Connection {
                 // broken conn
                 this.close();
 
-                LOGGER.log(Level.WARNING, e.getMessage(), e);
+                log.log(Level.WARNING, e.getMessage(), e);
                 return;
             }
             this.readyCount.set(maxInFlight);
@@ -55,7 +54,9 @@ public abstract class Connection {
         this.reader.addMessageForProcessing(message);
     }
 
-    public abstract void send(String command, byte[]... data) throws NSQException;
+    public abstract void init(String host, int port, NSQReader reader);
+
+    public abstract void send(String command, byte[]... datas) throws NSQException;
 
     public abstract void connect() throws NSQException;
 
@@ -63,43 +64,45 @@ public abstract class Connection {
 
     public abstract void close();
 
-    public Message decodeMessage(byte[] data) throws NSQException {
-        ByteBuffer buffer = ByteBuffer.wrap(data);
-        buffer.order(ByteOrder.BIG_ENDIAN);
-
-        long timestamp = buffer.getLong(); // 8 bytes
-        short attempts = buffer.getShort(); // 2 bytes
-        byte[] id = new byte[16];
-        buffer.get(id);
-        byte[] body = new byte[data.length - 26];
-        buffer.get(body);
-
-        return new Message(id, body, timestamp, attempts, this);
+    public Message decodeMesage(byte[] data) throws NSQException {
+        DataInputStream ds = new DataInputStream(new ByteArrayInputStream(data));
+        try {
+            long timestamp = ds.readLong(); // 8 bytes
+            short attempts = ds.readShort(); // 2 bytes
+            byte[] id = new byte[16];
+            ds.read(id);
+            byte[] body = new byte[data.length - 26];
+            ds.read(body);
+            return new Message(id, body, timestamp, attempts, this);
+        } catch (IOException e) {
+            throw new NSQException(e);
+        }
     }
 
     public void handleResponse(byte[] response) throws NSQException {
-        if (response.length < 4) {
-            throw new NSQException("Invalid framed response, needs to be at least 4 bytes!");
-        }
+        DataInputStream ds = new DataInputStream(new ByteArrayInputStream(response));
+        try {
+            FrameType ft = FrameType.fromInt(ds.readInt());
+            switch (ft) {
+                case FRAMETYPERESPONSE:
+                    if ("_heartbeat_".equals(new String(response).trim())) {
+                        this.send(ConnectionUtils.nop());
+                    }
 
-        ByteBuffer buffer = ByteBuffer.wrap(response, 0, 4);
-        int frame_id = buffer.getInt();
-        FrameType ft = FrameType.fromInt(frame_id);
-        switch (ft) {
-            case FRAMETYPERESPONSE:
-                if ("_heartbeat_".equals(new String(response).trim())) {
-                    this.send(ConnectionUtils.nop());
-                }
-
-                break;
-            case FRAMETYPEMESSAGE:
-                byte[] messageBytes = Arrays.copyOfRange(response, 4, response.length);
-                Message msg = this.decodeMessage(messageBytes);
-                this.messageReceivedCallback(msg);
-                break;
-            case FRAMETYPEERROR:
-                String errMsg = new String(Arrays.copyOfRange(response, 4, response.length));
-                throw new NSQException(errMsg);
+                    break;
+                case FRAMETYPEMESSAGE:
+                    byte[] messageBytes = Arrays.copyOfRange(response, 4, response.length);
+                    Message msg = this.decodeMesage(messageBytes);
+                    this.messageReceivedCallback(msg);
+                    break;
+                case FRAMETYPEERROR:
+                    String errMsg = new String(Arrays.copyOfRange(response, 4, response.length));
+                    throw new NSQException(errMsg);
+            }
+        } catch (IOException e) {
+            // this isn't a *real* IOException, as we are only reading from a byte array.
+            // if this were to be triggered, it would mean that there was a malformed message
+            throw new NSQException(e);
         }
     }
 

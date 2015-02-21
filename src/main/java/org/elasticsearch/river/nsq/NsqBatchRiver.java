@@ -1,6 +1,6 @@
 package org.elasticsearch.river.nsq;
 
-import ly.bit.nsq.ConnectionUtils;
+import ly.bit.nsq.util.ConnectionUtils;
 import ly.bit.nsq.Message;
 import ly.bit.nsq.exceptions.NSQException;
 import ly.bit.nsq.sync.BatchReader;
