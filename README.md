@@ -6,12 +6,16 @@ The NSQ River plugin allows index bulk format messages into elasticsearch.
 Much thanks to the bitly NSQ team for providing the NSQ java api and Elasticsearch for their reference implementation of the elasticsearch-river-mq.
 Alot of the structure / code was patterned from these two pieces.
 
-In order to install the plugin, simply run: `bin/plugin -install elasticsearch/elasticsearch-river-nsq/1.0.1`.
+In order to install the plugin, simply run: `bin/plugin -install elasticsearch/elasticsearch-river-nsq/1.0.3`.
 
     --------------------------------------------------------
     | NSQ Plugin      | ElasticSearch    | NSQ Daemon      |
     --------------------------------------------------------
-    | master          | 0.90 -> master   | 0.2.18          |
+    | master          | 0.90 -> master   | 0.2.18+         |
+    --------------------------------------------------------
+    | 1.0.3           | 0.90 -> master   | 0.2.18+         |
+    --------------------------------------------------------
+    | 1.0.2           | 0.90 -> master   | 0.2.18          |
     --------------------------------------------------------
     | 1.0.1           | 0.19 -> 0.20.5   | 0.2.18          |
     --------------------------------------------------------
@@ -22,7 +26,7 @@ Binary releases are @ :
 
 Installation of binary releases:
 
-    ./plugin -url https://downloads.sourceforge.net/project/es-river-nsq/elasticsearch-river-nsq-1.0.1.zip -install elasticsearch-river-nsq
+    ./plugin -url https://downloads.sourceforge.net/project/es-river-nsq/elasticsearch-river-nsq-1.0.3.zip -install elasticsearch-river-nsq
 
 NSQ River allows to automatically index a [NSQ](https://github.com/bitly/nsq) topic / channel. The format of the messages follows the bulk api format:
 
